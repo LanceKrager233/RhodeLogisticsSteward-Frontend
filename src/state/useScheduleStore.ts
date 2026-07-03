@@ -50,6 +50,23 @@ interface PosterCanvasHistory {
   future: PosterCanvasState[];
 }
 
+const maxPosterHistoryEntries = 50;
+
+function posterCanvasKey(canvas: PosterCanvasState): string {
+  return JSON.stringify(canvas);
+}
+
+function appendPosterHistory(
+  past: PosterCanvasState[],
+  canvas: PosterCanvasState,
+): PosterCanvasState[] {
+  if (past.length > 0 && posterCanvasKey(past.at(-1)!) === posterCanvasKey(canvas)) {
+    return past;
+  }
+
+  return [...past, canvas].slice(-maxPosterHistoryEntries);
+}
+
 export function useScheduleStore(initialDocument?: ScheduleDocument) {
   const [document, setDocument] = useState<ScheduleDocument>(() => {
     if (initialDocument) {
@@ -104,10 +121,12 @@ export function useScheduleStore(initialDocument?: ScheduleDocument) {
         const next = updater(current);
         const nextPosterCanvas = currentPosterCanvas(next);
 
-        setPosterCanvasHistory((history) => ({
-          past: [...history.past, previousPosterCanvas],
-          future: [],
-        }));
+        if (posterCanvasKey(previousPosterCanvas) !== posterCanvasKey(nextPosterCanvas)) {
+          setPosterCanvasHistory((history) => ({
+            past: appendPosterHistory(history.past, previousPosterCanvas),
+            future: [],
+          }));
+        }
 
         return {
           ...next,
@@ -216,7 +235,7 @@ export function useScheduleStore(initialDocument?: ScheduleDocument) {
 
         return {
           past: history.past.slice(0, -1),
-          future: [currentCanvas, ...history.future],
+          future: [currentCanvas, ...history.future].slice(0, maxPosterHistoryEntries),
         };
       });
     }, [currentPosterCanvas, document, posterCanvasHistory.past]),
@@ -234,7 +253,7 @@ export function useScheduleStore(initialDocument?: ScheduleDocument) {
         }
 
         return {
-          past: [...history.past, currentCanvas],
+          past: appendPosterHistory(history.past, currentCanvas),
           future: history.future.slice(1),
         };
       });
