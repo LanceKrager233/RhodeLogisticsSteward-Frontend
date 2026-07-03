@@ -70,6 +70,19 @@ function getInitialSidebarCollapsed(): boolean {
   return window.matchMedia?.("(max-width: 1180px)").matches ?? false;
 }
 
+function isEditableKeyboardTarget(target: EventTarget | null): boolean {
+  if (!(target instanceof HTMLElement)) {
+    return false;
+  }
+
+  return (
+    target.isContentEditable ||
+    target instanceof HTMLInputElement ||
+    target instanceof HTMLTextAreaElement ||
+    target instanceof HTMLSelectElement
+  );
+}
+
 async function loadJson<T>(path: string): Promise<T> {
   const response = await fetch(path);
   if (!response.ok) {
@@ -129,6 +142,12 @@ export function EditorShell({ initialDocument }: EditorShellProps) {
   const inputRef = useRef<HTMLInputElement | null>(null);
   const canvasScrollerRef = useRef<HTMLDivElement | null>(null);
   const canvasRef = useRef<HTMLDivElement | null>(null);
+  const {
+    canRedoPosterCanvas,
+    canUndoPosterCanvas,
+    redoPosterCanvas,
+    undoPosterCanvas,
+  } = store;
   const basePath = import.meta.env.BASE_URL;
   const zoom = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, fitZoom + zoomOffset));
   const selectedAssignment = useMemo(() => {
@@ -150,6 +169,29 @@ export function EditorShell({ initialDocument }: EditorShellProps) {
   useEffect(() => {
     window.localStorage.setItem(SIDEBAR_STORAGE_KEY, String(sidebarCollapsed));
   }, [sidebarCollapsed]);
+
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (isEditableKeyboardTarget(event.target) || (!event.ctrlKey && !event.metaKey)) {
+        return;
+      }
+
+      const key = event.key.toLowerCase();
+      const wantsUndo = key === "z" && !event.shiftKey;
+      const wantsRedo = key === "y" || (key === "z" && event.shiftKey);
+
+      if (wantsUndo && canUndoPosterCanvas) {
+        event.preventDefault();
+        undoPosterCanvas();
+      } else if (wantsRedo && canRedoPosterCanvas) {
+        event.preventDefault();
+        redoPosterCanvas();
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [canRedoPosterCanvas, canUndoPosterCanvas, redoPosterCanvas, undoPosterCanvas]);
 
   useEffect(() => {
     let active = true;
