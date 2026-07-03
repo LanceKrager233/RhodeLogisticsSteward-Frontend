@@ -2,6 +2,7 @@ import { BrowserRouter, Route, Routes, useParams, useSearchParams } from "react-
 import { createSampleSchedule, longTextSchedule, missingPortraitSchedule } from "../data/mockSchedule";
 import { EditorShell } from "../components/editor/EditorShell";
 import { normalizePosterMode, normalizePosterTemplateId } from "../domain/posterDefinitions";
+import { AppErrorBoundary } from "./AppErrorBoundary";
 
 function SampleRoute() {
   const params = useParams();
@@ -25,11 +26,13 @@ function SampleRoute() {
 
 export default function App() {
   return (
-    <BrowserRouter>
-      <Routes>
-        <Route element={<EditorShell />} path="/" />
-        <Route element={<SampleRoute />} path="/sample/:sampleId" />
-      </Routes>
-    </BrowserRouter>
+    <AppErrorBoundary>
+      <BrowserRouter>
+        <Routes>
+          <Route element={<EditorShell />} path="/" />
+          <Route element={<SampleRoute />} path="/sample/:sampleId" />
+        </Routes>
+      </BrowserRouter>
+    </AppErrorBoundary>
   );
 }
