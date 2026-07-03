@@ -78,14 +78,13 @@ async function loadJson<T>(path: string): Promise<T> {
   return (await response.json()) as T;
 }
 
-function assertLoadedEditorData(
-  manifest: OperatorManifest,
-  buildingReference: BuildingReference,
-): void {
+function assertLoadedOperators(manifest: OperatorManifest): void {
   if (!Array.isArray(manifest.operators) || manifest.operators.length === 0) {
     throw new Error("Operator manifest is empty. Backend data was not loaded.");
   }
+}
 
+function assertLoadedBuildingReference(buildingReference: BuildingReference): void {
   if (!Array.isArray(buildingReference.roomTypes) || buildingReference.roomTypes.length === 0) {
     throw new Error("Building reference room types are empty. Backend data was not loaded.");
   }
@@ -131,6 +130,7 @@ export function EditorShell({ initialDocument }: EditorShellProps) {
   const canvasRef = useRef<HTMLDivElement | null>(null);
   const basePath = import.meta.env.BASE_URL;
   const zoom = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, fitZoom + zoomOffset));
+  const editorOperators = operators ?? [];
   const selectedAssignment = useMemo(() => {
     if (!selectedSlot) {
       return null;
@@ -154,32 +154,60 @@ export function EditorShell({ initialDocument }: EditorShellProps) {
   useEffect(() => {
     let active = true;
 
-    Promise.all([
-      loadJson<OperatorManifest>(`${basePath}operators/manifest.json`),
-      loadJson<BuildingReference>(`${basePath}data/building-reference.json`),
-    ])
-      .then(([manifest, buildingReference]) => {
-        if (!active) {
-          return;
-        }
-        assertLoadedEditorData(manifest, buildingReference);
-        setOperators(manifest.operators);
-        setReference(buildingReference);
-        setLoadError("");
-      })
-      .catch((loadError: unknown) => {
-        if (!active) {
-          return;
-        }
+    async function loadEditorData() {
+      const [manifestResult, referenceResult] = await Promise.allSettled([
+        loadJson<OperatorManifest>(`${basePath}operators/manifest.json`),
+        loadJson<BuildingReference>(`${basePath}data/building-reference.json`),
+      ]);
 
-        setOperators(null);
-        setReference(null);
-        setLoadError(
-          loadError instanceof Error
-            ? `Backend data load failed: ${loadError.message}`
-            : "Backend data load failed.",
+      if (!active) {
+        return;
+      }
+
+      const loadErrors: string[] = [];
+
+      if (manifestResult.status === "fulfilled") {
+        try {
+          assertLoadedOperators(manifestResult.value);
+          setOperators(manifestResult.value.operators);
+        } catch (manifestError) {
+          setOperators([]);
+          loadErrors.push(
+            manifestError instanceof Error ? manifestError.message : "Operator manifest failed validation.",
+          );
+        }
+      } else {
+        setOperators([]);
+        loadErrors.push(
+          manifestResult.reason instanceof Error
+            ? `Operator data load failed: ${manifestResult.reason.message}`
+            : "Operator data load failed.",
         );
-      });
+      }
+
+      if (referenceResult.status === "fulfilled") {
+        try {
+          assertLoadedBuildingReference(referenceResult.value);
+          setReference(referenceResult.value);
+        } catch (referenceError) {
+          setReference(null);
+          loadErrors.push(
+            referenceError instanceof Error ? referenceError.message : "Building reference failed validation.",
+          );
+        }
+      } else {
+        setReference(null);
+        loadErrors.push(
+          referenceResult.reason instanceof Error
+            ? `Building reference load failed: ${referenceResult.reason.message}`
+            : "Building reference load failed.",
+        );
+      }
+
+      setLoadError(loadErrors.join(" "));
+    }
+
+    void loadEditorData();
 
     return () => {
       active = false;
@@ -420,18 +448,12 @@ export function EditorShell({ initialDocument }: EditorShellProps) {
     );
   }
 
-  if (loadError || operators === null || reference === null) {
+  if (operators === null) {
     return (
       <div className={styles.appFrame} data-focus-mode={false} data-sidebar-collapsed>
         <main className={styles.workspace} data-sidebar-collapsed>
           <section className={styles.canvasStage}>
-            {loadError ? (
-              <div className={styles.error} role="alert">
-                {loadError}
-              </div>
-            ) : (
-              <div className={styles.notice}>Loading backend data...</div>
-            )}
+            <div className={styles.notice}>Loading backend data...</div>
           </section>
         </main>
       </div>
@@ -520,6 +542,7 @@ export function EditorShell({ initialDocument }: EditorShellProps) {
                 </ContourButton>
               </div>
             ) : null}
+            {loadError ? <div className={styles.error} role="alert">{loadError}</div> : null}
             {error ? <div className={styles.error}>{error}</div> : null}
             {!error && notice ? <div className={styles.notice}>{notice}</div> : null}
             {renderPosterEditorToolbar()}
@@ -550,7 +573,7 @@ export function EditorShell({ initialDocument }: EditorShellProps) {
                       setSelectedSlot(address);
                       setPickerOpen(true);
                     }}
-                    operators={operators}
+                    operators={editorOperators}
                     reference={reference}
                     ref={canvasRef}
                     selectedSlot={selectedSlot}
@@ -584,7 +607,7 @@ export function EditorShell({ initialDocument }: EditorShellProps) {
           }}
           onOpenChange={setPickerOpen}
           open={pickerOpen}
-          operators={operators}
+          operators={editorOperators}
           reference={reference}
           selectedProduct={selectedAssignment?.product}
           selectedRoomType={selectedAssignment?.roomType}
