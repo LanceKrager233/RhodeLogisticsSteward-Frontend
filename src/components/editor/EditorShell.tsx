@@ -45,9 +45,11 @@ function ClearDropZone() {
 
   return (
     <div
+      aria-label="Drop here to clear the selected slot"
       className={styles.dropZone}
       data-over={isOver}
       ref={setNodeRef}
+      role="region"
     >
       拖到这里清空槽位
     </div>
@@ -273,7 +275,7 @@ export function EditorShell({ initialDocument }: EditorShellProps) {
 
   function renderZoomActions() {
     return (
-      <span className={styles.zoomActions}>
+      <span aria-label="Canvas zoom controls" className={styles.zoomActions} role="toolbar">
         <ContourButton
           aria-label="缩小画布"
           className={styles.posterToolbarContourButton}
@@ -335,9 +337,16 @@ export function EditorShell({ initialDocument }: EditorShellProps) {
 
   function renderPosterEditorToolbar() {
     return (
-      <div className={styles.posterEditorToolbar} data-export-hidden data-poster-editor-toolbar>
+      <div
+        aria-label="Poster editing controls"
+        className={styles.posterEditorToolbar}
+        data-export-hidden
+        data-poster-editor-toolbar
+        role="toolbar"
+      >
         <div className={styles.posterToolbarGroup}>
           <ContourButton
+            aria-label="Regenerate poster layout"
             className={styles.posterToolbarContourButton}
             onClick={store.regeneratePosterCanvas}
             size="sm"
@@ -347,6 +356,7 @@ export function EditorShell({ initialDocument }: EditorShellProps) {
             重排海报
           </ContourButton>
           <ContourButton
+            aria-label="Undo poster edit"
             className={styles.posterToolbarContourButton}
             disabled={!store.canUndoPosterCanvas}
             onClick={store.undoPosterCanvas}
@@ -357,6 +367,7 @@ export function EditorShell({ initialDocument }: EditorShellProps) {
             撤销
           </ContourButton>
           <ContourButton
+            aria-label="Redo poster edit"
             className={styles.posterToolbarContourButton}
             disabled={!store.canRedoPosterCanvas}
             onClick={store.redoPosterCanvas}
@@ -367,6 +378,7 @@ export function EditorShell({ initialDocument }: EditorShellProps) {
             重做
           </ContourButton>
           <ContourButton
+            aria-label="Clear poster canvas"
             className={styles.posterToolbarContourButton}
             data-poster-clear-canvas
             onClick={() => {
@@ -392,6 +404,7 @@ export function EditorShell({ initialDocument }: EditorShellProps) {
             </Switch.Root>
           </label>
           <ContourButton
+            aria-label={posterGuidesVisible ? "Hide poster guides" : "Show poster guides"}
             className={styles.posterToolbarContourButton}
             data-poster-guides-toggle
             onClick={() => setPosterGuidesVisible((value) => !value)}
@@ -403,8 +416,9 @@ export function EditorShell({ initialDocument }: EditorShellProps) {
           </ContourButton>
         </div>
         {!focusMode ? (
-          <div className={styles.posterToolbarActions}>
+          <div aria-label="Poster view controls" className={styles.posterToolbarActions} role="toolbar">
             <ContourButton
+              aria-label="Enter focus editing mode"
               className={styles.posterToolbarContourButton}
               onClick={() => setFocusMode(true)}
               size="sm"
@@ -430,7 +444,7 @@ export function EditorShell({ initialDocument }: EditorShellProps) {
                 {loadError}
               </div>
             ) : (
-              <div className={styles.notice}>Loading backend data...</div>
+              <div className={styles.notice} role="status">Loading backend data...</div>
             )}
           </section>
         </main>
@@ -499,10 +513,16 @@ export function EditorShell({ initialDocument }: EditorShellProps) {
           ) : null}
           <section className={styles.canvasStage}>
             {focusMode ? (
-              <div className={styles.focusToolbar} data-export-hidden>
+              <div
+                aria-label="Focus editing controls"
+                className={styles.focusToolbar}
+                data-export-hidden
+                role="toolbar"
+              >
                 {renderCompactSelects()}
                 {renderZoomActions()}
                 <ContourButton
+                  aria-label="Export poster as PNG"
                   onClick={handleExportPng}
                   size="sm"
                   style={POSTER_TOOLBAR_BUTTON_STYLE}
@@ -511,6 +531,7 @@ export function EditorShell({ initialDocument }: EditorShellProps) {
                   导出图片
                 </ContourButton>
                 <ContourButton
+                  aria-label="Exit focus editing mode"
                   onClick={() => setFocusMode(false)}
                   size="sm"
                   style={POSTER_TOOLBAR_BUTTON_STYLE}
@@ -520,8 +541,8 @@ export function EditorShell({ initialDocument }: EditorShellProps) {
                 </ContourButton>
               </div>
             ) : null}
-            {error ? <div className={styles.error}>{error}</div> : null}
-            {!error && notice ? <div className={styles.notice}>{notice}</div> : null}
+            {error ? <div className={styles.error} role="alert">{error}</div> : null}
+            {!error && notice ? <div className={styles.notice} role="status">{notice}</div> : null}
             {renderPosterEditorToolbar()}
             <ClearDropZone />
             <div className={styles.canvasScroller} data-canvas-scroller ref={canvasScrollerRef}>
