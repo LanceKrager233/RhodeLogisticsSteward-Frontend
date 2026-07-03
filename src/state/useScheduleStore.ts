@@ -43,7 +43,7 @@ import type {
   ScheduleDocument,
   SlotAddress,
 } from "../domain/types";
-import { clearLocalDraft, loadLocalDraft, saveLocalDraft } from "./useLocalDraft";
+import { clearLocalDraft, flushLocalDraftSave, loadLocalDraft, scheduleLocalDraftSave } from "./useLocalDraft";
 
 interface PosterCanvasHistory {
   past: PosterCanvasState[];
@@ -64,7 +64,8 @@ export function useScheduleStore(initialDocument?: ScheduleDocument) {
   });
 
   useEffect(() => {
-    saveLocalDraft(document);
+    scheduleLocalDraftSave(document);
+    return () => flushLocalDraftSave(document);
   }, [document]);
 
   const assignedOperatorIds = useMemo(() => {
