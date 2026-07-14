@@ -2,10 +2,12 @@ import { Select } from "@base-ui/react/select";
 import type { ReactNode } from "react";
 import {
   ArrowCounterClockwiseIcon,
+  BookOpenTextIcon,
   CaretDownIcon,
   DownloadSimpleIcon,
   FileArrowDownIcon,
   FileArrowUpIcon,
+  ShieldCheckIcon,
 } from "@phosphor-icons/react";
 import { bentoLayoutIds } from "../../domain/bentoDefinitions";
 import {
@@ -28,7 +30,9 @@ interface ToolbarProps {
   onPosterTemplateChange: (templateId: PosterTemplateId) => void;
   onPosterModeChange: (mode: PosterMode) => void;
   onImportClick: () => void;
+  onSklandImportClick: () => void;
   onExportJson: () => void;
+  onExportMaa: () => void;
   onExportPng: () => void;
   onReset: () => void;
 }
@@ -109,7 +113,9 @@ export function Toolbar({
   onPosterTemplateChange,
   onPosterModeChange,
   onImportClick,
+  onSklandImportClick,
   onExportJson,
+  onExportMaa,
   onExportPng,
   onReset,
 }: ToolbarProps) {
@@ -161,12 +167,36 @@ export function Toolbar({
           导入
         </ContourButton>
         <ContourButton
+          icon={<ShieldCheckIcon />}
+          onClick={onSklandImportClick}
+          size="sm"
+          variant="white"
+        >
+          森空岛
+        </ContourButton>
+        <ContourButton
           icon={<FileArrowDownIcon />}
           onClick={onExportJson}
           size="sm"
           variant="white"
         >
           JSON
+        </ContourButton>
+        <ContourButton
+          icon={<FileArrowDownIcon />}
+          onClick={onExportMaa}
+          size="sm"
+          variant="white"
+        >
+          MAA
+        </ContourButton>
+        <ContourButton
+          icon={<BookOpenTextIcon />}
+          onClick={() => window.open("https://github.com/KnightCodeSquareMatrix/arknights-base-vault", "_blank", "noopener,noreferrer")}
+          size="sm"
+          variant="white"
+        >
+          知识库
         </ContourButton>
         <ContourButton
           icon={<ArrowCounterClockwiseIcon />}

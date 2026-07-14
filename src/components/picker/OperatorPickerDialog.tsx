@@ -219,6 +219,11 @@ export function OperatorPickerDialog({
                 <span>
                   <span className={styles.operatorCardName}>{operator.name}</span>
                   <span className={styles.operatorMeta}>
+                    {operator.cultivation
+                      ? operator.cultivation.owned
+                        ? `精${operator.cultivation.elitePhase} Lv.${operator.cultivation.level} · `
+                        : "未拥有 · "
+                      : ""}
                     {operator.profession ?? "干员"} · {formatOperatorRarity(operator.rarity)}
                   </span>
                   <span className={styles.tagRow}>

@@ -143,7 +143,7 @@ describe("EditorShell layout space controls", () => {
     fireEvent.click(screen.getByText("专注编辑"));
 
     expect(container.querySelector("[data-focus-mode='true']")).toBeInTheDocument();
-    expect(screen.queryByText("导入")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "导入" })).not.toBeInTheDocument();
     expect(screen.getByText("导出图片")).toBeInTheDocument();
     expect(screen.getByText("退出专注")).toBeInTheDocument();
     expect(container.querySelector("select[aria-label='布局']")).toBeInTheDocument();
@@ -152,7 +152,7 @@ describe("EditorShell layout space controls", () => {
     fireEvent.click(screen.getByText("退出专注"));
 
     expect(container.querySelector("[data-focus-mode='false']")).toBeInTheDocument();
-    expect(screen.getByText("导入")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "导入" })).toBeInTheDocument();
   });
 
   it("keeps poster editing actions outside the export canvas", async () => {

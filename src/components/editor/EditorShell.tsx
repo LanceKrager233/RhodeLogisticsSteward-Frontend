@@ -4,9 +4,10 @@ import { MinusIcon, PlusIcon, SidebarSimpleIcon } from "@phosphor-icons/react";
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { bentoLayoutIds } from "../../domain/bentoDefinitions";
 import { queueCountOptions } from "../../domain/queueLimits";
-import { downloadJson } from "../../export/downloadJson";
+import { downloadJson, downloadMaaJson } from "../../export/downloadJson";
 import { exportSchedulePng } from "../../export/exportPng";
 import { importScheduleJson } from "../../export/importJson";
+import { importSklandCultivation } from "../../import/skland";
 import type {
   BuildingReference,
   Operator,
@@ -21,6 +22,7 @@ import { DragDropProvider } from "../dnd/DragDropProvider";
 import { OperatorPickerDialog } from "../picker/OperatorPickerDialog";
 import { ContourButton } from "../ui/ContourButton";
 import { BuildingPalette } from "./BuildingPalette";
+import { SklandImportDialog } from "./SklandImportDialog";
 import { Toolbar } from "./Toolbar";
 
 interface EditorShellProps {
@@ -116,6 +118,7 @@ export function EditorShell({ initialDocument }: EditorShellProps) {
   const [reference, setReference] = useState<BuildingReference | null>(null);
   const [selectedSlot, setSelectedSlot] = useState<SlotAddress | null>(null);
   const [pickerOpen, setPickerOpen] = useState(false);
+  const [sklandImportOpen, setSklandImportOpen] = useState(false);
   const [loadError, setLoadError] = useState("");
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
@@ -254,6 +257,24 @@ export function EditorShell({ initialDocument }: EditorShellProps) {
     } catch (importError) {
       setError(importError instanceof Error ? importError.message : "导入失败");
       setNotice("");
+    }
+  }
+
+  async function handleSklandImport(credentials: string) {
+    if (!operators || !reference) {
+      throw new Error("干员数据尚未加载完成。");
+    }
+    try {
+      const result = await importSklandCultivation(credentials, operators, reference);
+      setOperators(result.operators);
+      setError("");
+      setNotice(
+        `已从森空岛导入 ${result.nickname} 的练度：账号共 ${result.ownedCount} 名干员，匹配当前基建目录 ${result.matchedCount} 名。`,
+      );
+    } catch (importError) {
+      setError(importError instanceof Error ? importError.message : "森空岛练度读取失败。");
+      setNotice("");
+      throw importError;
     }
   }
 
@@ -454,8 +475,10 @@ export function EditorShell({ initialDocument }: EditorShellProps) {
             <Toolbar
               document={store.document}
               onExportJson={() => downloadJson(store.document)}
+              onExportMaa={() => downloadMaaJson(store.document, operators)}
               onExportPng={handleExportPng}
               onImportClick={() => inputRef.current?.click()}
+              onSklandImportClick={() => setSklandImportOpen(true)}
               onLayoutChange={store.setLayout}
               onPosterModeChange={(posterMode) => store.updatePosterSettings({ posterMode })}
               onPosterTemplateChange={(posterTemplateId) => store.updatePosterSettings({ posterTemplateId })}
@@ -467,9 +490,12 @@ export function EditorShell({ initialDocument }: EditorShellProps) {
               }}
             />
             <input
-              accept="application/json"
+              accept="application/json,.json"
               hidden
-              onChange={(event) => void handleImport(event.target.files?.[0])}
+              onChange={(event) => {
+                void handleImport(event.target.files?.[0]);
+                event.target.value = "";
+              }}
               ref={inputRef}
               type="file"
             />
@@ -590,6 +616,11 @@ export function EditorShell({ initialDocument }: EditorShellProps) {
           selectedRoomType={selectedAssignment?.roomType}
           selectedSlot={selectedSlot}
           selectedSlotAssignment={selectedSlotAssignment}
+        />
+        <SklandImportDialog
+          onImport={handleSklandImport}
+          onOpenChange={setSklandImportOpen}
+          open={sklandImportOpen}
         />
       </DragDropProvider>
     </div>

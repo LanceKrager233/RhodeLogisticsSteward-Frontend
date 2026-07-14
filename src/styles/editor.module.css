@@ -705,6 +705,45 @@
   font-weight: 900;
 }
 
+.sklandDialog {
+  width: min(620px, calc(100vw - 28px));
+  grid-template-rows: auto auto 1fr auto;
+}
+
+.sklandDescription {
+  color: var(--color-ink-muted);
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.sklandDialogBody {
+  display: grid;
+  gap: 12px;
+  overflow: auto;
+}
+
+.sklandSteps {
+  display: grid;
+  gap: 5px;
+  margin: 0;
+  padding-left: 22px;
+  color: var(--color-ink-muted);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.sklandCommand {
+  display: block;
+  overflow-x: auto;
+  border: 1px solid var(--color-line-strong);
+  border-radius: var(--radius-sm);
+  padding: 10px;
+  background: #eef1ed;
+  color: var(--color-ink);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
 .dialogControls {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;

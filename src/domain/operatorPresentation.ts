@@ -1,10 +1,25 @@
 import type {
   BuildingReference,
+  ElitePhase,
   Operator,
   OperatorBuildingSkill,
   ProductKind,
   ProductionFormulaTypeId,
 } from "./types";
+
+export function resolveDisplayedElitePhase(
+  operator: Operator | undefined,
+  slotElitePhase: ElitePhase | undefined,
+  requiredElitePhase: number,
+): ElitePhase | undefined {
+  if (!operator) return undefined;
+  if (slotElitePhase) return slotElitePhase;
+  if (operator.cultivation) {
+    const phase = operator.cultivation.owned ? operator.cultivation.elitePhase : 0;
+    return phase === 1 || phase === 2 ? phase : undefined;
+  }
+  return requiredElitePhase >= 2 ? 2 : requiredElitePhase >= 1 ? 1 : undefined;
+}
 
 const formulaByProduct: Partial<Record<ProductKind, ProductionFormulaTypeId>> = {
   CombatRecord: "F_EXP",

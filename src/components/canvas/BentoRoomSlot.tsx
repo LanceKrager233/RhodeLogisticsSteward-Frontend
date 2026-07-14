@@ -1,5 +1,9 @@
 import { useDraggable, useDroppable } from "@dnd-kit/core";
-import { formatOperatorRarity, getRequiredElitePhase } from "../../domain/operatorPresentation";
+import {
+  formatOperatorRarity,
+  getRequiredElitePhase,
+  resolveDisplayedElitePhase,
+} from "../../domain/operatorPresentation";
 import type {
   BuildingReference,
   ElitePhase,
@@ -42,9 +46,11 @@ export function BentoRoomSlot({
 }: BentoRoomSlotProps) {
   const slotId = `slot:${address.queueId}:${address.assignmentId}:${address.slotIndex}`;
   const requiredElitePhase = getRequiredElitePhase(reference, operator, roomType, product);
-  const displayElitePhase: ElitePhase | undefined = operator
-    ? slot.elitePhase ?? (requiredElitePhase >= 2 ? 2 : requiredElitePhase >= 1 ? 1 : undefined)
-    : undefined;
+  const displayElitePhase: ElitePhase | undefined = resolveDisplayedElitePhase(
+    operator,
+    slot.elitePhase,
+    requiredElitePhase,
+  );
   const { isOver, setNodeRef: setDropRef } = useDroppable({
     id: slotId,
     data: { type: "slot", address },

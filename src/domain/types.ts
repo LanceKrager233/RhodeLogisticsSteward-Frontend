@@ -66,6 +66,13 @@ export interface Operator {
   profession?: string;
   subProfession?: string;
   rarity?: number;
+  cultivation?: {
+    characterId: string;
+    owned: boolean;
+    elitePhase: 0 | ElitePhase;
+    level: number;
+    potential: number;
+  };
   source: "avatars" | "mock";
 }
 

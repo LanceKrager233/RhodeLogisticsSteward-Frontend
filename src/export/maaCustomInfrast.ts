@@ -16,9 +16,9 @@ type MaaRoomKey =
   | "dormitory"
   | "meeting"
   | "hire"
-  | "training";
+  | "processing";
 
-interface MaaRoom {
+export interface MaaRoom {
   skip?: boolean;
   product?: string;
   operators?: string[];
@@ -26,7 +26,7 @@ interface MaaRoom {
   autofill?: boolean;
 }
 
-interface MaaPlan {
+export interface MaaPlan {
   name?: string;
   description?: string;
   period?: [string, string][];
@@ -39,7 +39,7 @@ interface MaaPlan {
   rooms?: Partial<Record<MaaRoomKey, MaaRoom[]>>;
 }
 
-interface MaaCustomInfrast {
+export interface MaaCustomInfrast {
   title?: string;
   author?: string;
   description?: string;
@@ -63,6 +63,7 @@ const productMap: Record<string, ProductKind> = {
   puregold: "PureGold",
   "battle record": "CombatRecord",
   battlerecord: "CombatRecord",
+  "originium shard": "OriginStone",
   originstone: "OriginStone",
   "origin stone": "OriginStone",
 };
@@ -348,5 +349,132 @@ export function maaCustomInfrastToScheduleImport(
     importedPlanCount: plans.length,
     skippedPlanCount: Math.max(0, sourcePlans.length - plans.length),
     dronePlanCount: plans.filter((plan) => Boolean(describeDrone(plan))).length,
+  };
+}
+
+const maaRoomKeyByType: Partial<Record<BentoRoomTypeId, MaaRoomKey>> = {
+  CONTROL: "control",
+  TRADING: "trading",
+  MANUFACTURE: "manufacture",
+  POWER: "power",
+  MEETING: "meeting",
+  HIRE: "hire",
+};
+
+const maaProductByKind: Partial<Record<ProductKind, string>> = {
+  Money: "LMD",
+  PureGold: "Pure Gold",
+  CombatRecord: "Battle Record",
+  OriginStone: "Originium Shard",
+};
+
+function operatorNameById(operators: Operator[]): Map<string, string> {
+  return new Map(operators.map((operator) => [operator.id, operator.name]));
+}
+
+function assignedOperatorNames(
+  assignment: RoomAssignment,
+  namesById: Map<string, string>,
+): string[] {
+  return assignment.operators.flatMap((slot) => {
+    const name = slot.operatorId ? namesById.get(slot.operatorId) : slot.overrideName;
+    return name?.trim() ? [name.trim()] : [];
+  });
+}
+
+function schedulePeriod(label: string): [string, string][] | undefined {
+  const match = label.match(/\b([01]\d|2[0-3]):([0-5]\d)\s*[-~—至]\s*([01]\d|2[0-3]):([0-5]\d)\b/);
+  return match ? [[`${match[1]}:${match[2]}`, `${match[3]}:${match[4]}`]] : undefined;
+}
+
+function exportDrone(document: ScheduleDocument): MaaPlan["drones"] | undefined {
+  if (!document.droneSummary.enabled) {
+    return undefined;
+  }
+
+  const summary = `${document.droneSummary.targetRoomLabel} ${document.droneSummary.summaryText}`;
+  const room = /贸易|trading/i.test(summary) ? "trading" : "manufacture";
+  const index = Number(summary.match(/(?:站|room)\s*(\d+)/i)?.[1] ?? 1);
+
+  return { enable: true, room, index, order: "pre" };
+}
+
+function exportRoom(
+  assignment: RoomAssignment,
+  namesById: Map<string, string>,
+  useOrundum: boolean,
+): MaaRoom {
+  const operators = assignedOperatorNames(assignment, namesById);
+  if (operators.length === 0) {
+    return { skip: true };
+  }
+
+  const product =
+    assignment.roomType === "TRADING" && useOrundum
+      ? "Orundum"
+      : maaProductByKind[assignment.product ?? "Money"];
+
+  return {
+    operators,
+    sort: true,
+    ...(product ? { product } : {}),
+  };
+}
+
+function exportRooms(
+  assignments: RoomAssignment[],
+  namesById: Map<string, string>,
+): MaaPlan["rooms"] {
+  const rooms: MaaPlan["rooms"] = {};
+  const hasOriginiumShard = assignments.some(
+    (assignment) => assignment.roomType === "MANUFACTURE" && assignment.product === "OriginStone",
+  );
+  const lastTradingIndex = Math.max(
+    0,
+    ...assignments
+      .filter((assignment) => assignment.roomType === "TRADING")
+      .map((assignment) => assignment.roomIndex),
+  );
+
+  for (const roomType of Object.keys(maaRoomKeyByType) as BentoRoomTypeId[]) {
+    const key = maaRoomKeyByType[roomType];
+    if (!key) continue;
+
+    const roomAssignments = assignments
+      .filter((assignment) => assignment.roomType === roomType)
+      .sort((first, second) => first.roomIndex - second.roomIndex)
+      .map((assignment) =>
+        exportRoom(
+          assignment,
+          namesById,
+          roomType === "TRADING" && hasOriginiumShard && assignment.roomIndex === lastTradingIndex,
+        ),
+      );
+
+    if (roomAssignments.length > 0) {
+      rooms[key] = roomAssignments;
+    }
+  }
+
+  return rooms;
+}
+
+export function scheduleDocumentToMaaCustomInfrast(
+  document: ScheduleDocument,
+  operators: Operator[],
+): MaaCustomInfrast {
+  const namesById = operatorNameById(operators);
+  const drones = exportDrone(document);
+
+  return {
+    title: document.title,
+    description: [document.subtitle, ...document.notes].filter(Boolean).join("\n"),
+    plans: document.queues.map((queue) => ({
+      name: queue.label,
+      description: queue.durationLabel,
+      ...(schedulePeriod(queue.durationLabel) ? { period: schedulePeriod(queue.durationLabel) } : {}),
+      ...(drones ? { drones } : {}),
+      rooms: exportRooms(queue.roomAssignments, namesById),
+    })),
   };
 }
